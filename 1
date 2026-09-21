@@ -1,0 +1,352 @@
+#include <iostream>
+#include <cstdlib> 
+#include <ctime>  
+
+using namespace std;
+//пузырек
+void bubble_1(int* m, int n) { //не трогаем отсортированное    
+	for (int i = 0; i < n - 1; i++) {//по массиву  //не трогаем отсортированное 
+		for (int j = 0; j < n - i - 1; j++) {// по от начю до неотсорт. границы  //не трогаем отсортированное 
+			if (m[j] > m[j + 1]) {
+				int p = m[j];//p- врем. переменная
+				m[j] = m[j + 1];
+				m[j + 1] = p;
+			}
+		}
+	}
+}
+
+void optim_bubble_1(int* m, int n) {//отслеживание обменов
+	for (int i = 0; i < n - 1; i++) {//по массиву
+		bool swapped = false;// <-
+		for (int j = 0; j < n - i - 1; j++) {// по от начю до неотсорт. границы
+			if (m[j] > m[j + 1]) {
+				swapped = true; // <-
+				int p = m[j];//p- врем. переменная
+				m[j] = m[j + 1];
+				m[j + 1] = p;
+			}
+		}
+		if (!swapped) break;// <-
+	}
+}
+
+void optim_bubble_2(int* m, int n) { //шейкерная сортировка
+	int left_i = 0;
+	int right_i = n - 1;//конец массива
+	while (true) {
+		bool swapped = false;//признак состоявшегося обмена в массиве
+		for (int i = left_i; i < right_i; i++) {// топим больший элементы
+			if (m[i] > m[i + 1]) {
+				swapped = true;
+				int p = m[i+1];
+				m[i+1] = m[i];
+				m[i] = p;
+			}
+		}
+		right_i--;// сдвигаем границу
+		if ((left_i < right_i) && swapped) { // если границы сортировки не смкнулись и были обмены, то продолжаем сортировку
+			swapped = false;
+			for (int j = right_i; j > left_i; j--) {// выталкиваем меньший элементы
+				if (m[j] < m[j - 1]) {
+					swapped = true;
+					int p = m[j - 1];
+					m[j - 1] = m[j];
+					m[j] = p;
+				}
+			}
+			left_i++;
+			if (!swapped || (left_i == right_i)) break; // проверяем на смыкание границ и на отсутствие перестановок
+		}
+		else break; // если условие не выполняется, то массив отсортирован
+	}
+}
+
+//quit sort
+void swap_ab(int& a, int& b) {
+	int p = a;
+	a = b;
+	b = p;
+}
+int part(int* m, int low, int high) {
+	int p = m[high]; // выбор последнего элемента в качестве опорного
+	int i = low - 1;// индекс элемента, меньший, чем точка поворота
+
+	for (int j = low; j < high; j++) {
+		// если текущий элемент меньше или равен
+		if (m[j] <= p) {
+			i++;
+			swap_ab(m[i], m[j]);
+		}
+	}
+
+	swap_ab(m[i + 1], m[high]);
+
+	return i + 1;
+}
+void quit_sort_help(int* m, int low, int high) {
+	if (low < high) {
+
+		// массив на разделы
+		int p = part(m, low, high);
+
+		quit_sort_help(m, low, p - 1);
+
+		quit_sort_help(m, p + 1, high);
+	}
+}
+void quit_sort(int* m, int n) {
+	if (n > 1)
+	{
+		quit_sort_help(m, 0, n - 1);
+	}
+}
+
+//mearge_sort
+void merge(int* m, int left, int mid, int right) {
+	int size = right - left + 1;
+	int* t = new int[size];
+
+	int i = left;
+	int j = mid +1;
+	int k = 0;
+
+	while (i <= mid && j <= right) {
+		if (m[i] <= m[j]) {
+			t[k++] = m[i++];
+		}
+		else {
+			t[k++] = m[j++];
+		}
+	}
+	while (i <= mid) {
+		t[k++] = m[i++];
+	}
+	while (j <= right) {
+		t[k++] = m[j++];
+	}
+
+	for (int p = 0; p < size; ++p) {
+		m[left + p] = t[p];
+	}
+	delete[] t;
+}
+void mergeSort(int* m, int left, int right) {
+	if (left >= right) return;
+	int mid = left + (right - left) / 2;
+	mergeSort(m, left, mid);
+	mergeSort(m, mid + 1, right);
+	merge(m, left, mid, right);
+}
+void merge_sort(int* m, int n) {
+	if (n > 0) {
+		mergeSort(m, 0, n - 1);
+	}
+}
+
+//ПИМРАМИДА (КУЧА)
+void heapify(int* m, int n, int i) {
+	int root = i;
+	// инициализируем наибольший элемент как корень
+	int l = 2 * i + 1; // левый = 2*i + 1
+	int r = 2 * i + 2; // правый = 2*i + 2
+	// если левый дочерний элемент больше корня
+	if (l < n && m[l] > m[root])
+		root = l;
+	// если правый дочерний элемент больше, чем самый большой элемент на данный момент
+	if (r < n && m[r] > m[root])
+		root = r;
+	// если самый большой элемент не корень
+	if (root != i)
+	{
+		swap_ab(m[i], m[root]);
+
+		// рекурсивно преобразуем в двоичную кучу затронутое поддерево
+		heapify(m, n, root);
+	}
+}
+void heap_sort(int* m, int n) {
+	// построение кучи (
+	for (int i = n / 2 - 1; i >= 0; i--)
+		heapify(m, n, i);
+
+	// извлекаем элементы из кучи
+	for (int i = n - 1; i >= 0; i--)
+	{
+		//  корень в конец
+		swap_ab(m[0], m[i]);
+
+		heapify(m, i, 0);//куча меньше
+	}
+}
+
+void frand(int* m, int n) {
+	for (int i = 0; i < n; i++) {
+		m[i] = rand() % 1000000;
+	}
+}
+
+void test(int size) {
+    int* m1 = new int[size];
+    int* m2 = new int[size];
+    int* m3 = new int[size];
+    int* m4 = new int[size];
+    int* m5 = new int[size];
+    int* m6 = new int[size];
+
+    frand(m1, size);
+    cout << "test m : " << endl;
+    for (int i = 0; i < size; i++) {
+        cout << m1[i] << " ";
+    }
+    cout << endl << endl;
+    for (int i = 0; i < size; i++) {
+        m2[i] = m1[i];
+        m3[i] = m1[i];
+        m4[i] = m1[i];
+		m5[i] = m1[i];
+        m6[i] = m1[i];
+    }
+
+    //пузырь
+    bubble_1(m1, size);
+    cout << "bubble sort test:" << endl;
+    for (int i = 0; i < size; i++) {
+        cout << m1[i] << " ";
+    }
+    cout << endl;
+    delete[] m1;
+	//пузырь 1
+	optim_bubble_1(m2, size);
+	cout << "optim_bubble_1 sort test:" << endl;
+	for (int i = 0; i < size; i++) {
+		cout << m2[i] << " ";
+	}
+	cout << endl;
+	delete[] m2;
+	// optim_bubble_2
+	optim_bubble_2(m3, size);
+	cout << "optim_bubble_1 sort test:" << endl;
+	for (int i = 0; i < size; i++) {
+		cout << m3[i] << " ";
+	}
+	cout << endl;
+	delete[] m3;
+	// quit_sort
+	quit_sort(m4, size);
+	cout << "quit_sort sort test:" << endl;
+	for (int i = 0; i < size; i++) {
+		cout << m4[i] << " ";
+	}
+	cout << endl;
+	delete[] m4;
+	// mearge_sort
+	merge_sort(m5, size);
+	cout << "merge_sort sort test:" << endl;
+	for (int i = 0; i < size; i++) {
+		cout << m5[i] << " ";
+	}
+	cout << endl;
+	delete[] m5;
+	// heap_sort
+	heap_sort(m6, size);
+	cout << "heap_sort sort test:" << endl;
+	for (int i = 0; i < size; i++) {
+		cout << m6[i] << " ";
+	}
+	cout << endl;
+	delete[] m6;
+}
+
+void run(int size) {
+	int* m1 = new int[size];
+	int* m2 = new int[size];
+	int* m3 = new int[size];
+	int* m4 = new int[size];
+	int* m5 = new int[size];
+	int* m6 = new int[size];
+
+	frand(m1, size);
+	for (int i = 0; i < size; i++) {
+		m2[i] = m1[i];
+		m3[i] = m1[i];
+		m4[i] = m1[i];
+		m5[i] = m1[i];
+		m6[i] = m1[i];
+	}
+	//пузырь
+	clock_t start, end;
+	start= clock();
+	bubble_1(m1, size);
+	end = clock();
+	double second1 = (double)(end - start) / CLOCKS_PER_SEC;
+	cout << "m = " << size << "|       bubble_1 sort time = " << second1 << endl;
+	delete[] m1;
+	//optim_bubble_1
+	start = clock();
+	optim_bubble_1(m2, size);
+	end = clock();
+	double second2 = (double)(end - start) / CLOCKS_PER_SEC;
+	cout << "m = " << size << "| optim_bubble_1 sort time = " << second2 << endl;
+	delete[] m2;
+	//optim_bubble_2
+	start = clock();
+	optim_bubble_2(m3, size);
+	end = clock();
+	double second3 = (double)(end - start) / CLOCKS_PER_SEC;
+	cout << "m = " << size << "| optim_bubble_2 sort time = " << second3 << endl;
+	delete[] m3;
+	//quit_sort
+	start = clock();
+	quit_sort(m4, size);
+	end = clock();
+	double second4 = (double)(end - start) / CLOCKS_PER_SEC;
+	cout << "m = " << size << "|      quit_sort sort time = " << second4 << endl;
+	delete[] m4;
+	//merge_sort
+	start = clock();
+	quit_sort(m5, size);
+	end = clock();
+	double second5 = (double)(end - start) / CLOCKS_PER_SEC;
+	cout << "m = " << size << "|     merge_sort sort time = " << second5 << endl;
+	delete[] m5;
+	//heap_sort
+	start = clock();
+	heap_sort(m6, size);
+	end = clock();
+	double second6 = (double)(end - start) / CLOCKS_PER_SEC;
+	cout << "m = " << size << "|      heap_sort sort time = " << second6 << endl;
+	delete[] m6;
+
+}
+
+int main() {
+	srand(52);
+	//test(10);
+	//run(10000);
+	//run(20000);
+	////тест
+	//cout << "100000" << endl;
+	//run(100000);
+	//cout << "200000" << endl;
+	//run(200000);
+	//cout << "300000" << endl;
+	//run(300000);
+	//cout << "400000" << endl;
+	//run(400000);
+	//cout << "500000" << endl;
+	//run(500000);
+	cout << "600000" << endl;
+	run(600000);
+	cout << "700000" << endl;
+	run(700000);
+	cout << "800000" << endl;
+	run(800000);
+	cout << "900000" << endl;
+	run(900000);
+	cout << "1000000" << endl;
+	run(1000000);
+
+
+	return 0;
+}
